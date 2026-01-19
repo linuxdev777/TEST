@@ -26,12 +26,12 @@ body {
   text-align:center;
   box-shadow:0 15px 35px rgba(0,0,0,.15);
 }
-button,input {
+input, button {
   width:100%;
-  margin-top:12px;
   padding:12px;
-  border-radius:10px;
+  margin-top:12px;
   font-size:16px;
+  border-radius:10px;
 }
 button {
   border:none;
@@ -53,11 +53,11 @@ button:disabled {
 <body>
 <div class="card">
   <h2>Flupkins on Base</h2>
-  <p>Mint on Base Network</p>
+  <p>Direct mint on Base</p>
 
   <p><strong>Price:</strong> 0.00000001 ETH each</p>
 
-  <input id="qty" type="number" min="1" value="1" />
+  <input id="qty" type="number" min="1" value="1">
 
   <button id="connect">Connect Wallet</button>
   <button id="mint" disabled>Mint</button>
@@ -71,16 +71,9 @@ const CONTRACT = "0xb84ed5b1b7e402b11e7d14101ee3a2f3f5502035";
 const PRICE = ethers.utils.parseEther("0.00000001");
 const BASE_CHAIN_ID = "0x2105"; // Base mainnet
 
-const ABI = [
-  "function mint(uint256 quantity) public payable"
-];
+let provider, signer;
 
-let provider, signer, contract;
-
-const connectBtn = document.getElementById("connect");
-const mintBtn = document.getElementById("mint");
-
-connectBtn.onclick = async () => {
+document.getElementById("connect").onclick = async () => {
   if (!window.ethereum) return alert("Wallet not found");
 
   provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -98,17 +91,17 @@ connectBtn.onclick = async () => {
   document.getElementById("wallet").innerText =
     "Connected: " + await signer.getAddress();
 
-  contract = new ethers.Contract(CONTRACT, ABI, signer);
-  mintBtn.disabled = false;
+  document.getElementById("mint").disabled = false;
 };
 
-mintBtn.onclick = async () => {
+document.getElementById("mint").onclick = async () => {
   const qty = Number(document.getElementById("qty").value);
   if (qty < 1) return;
 
   try {
     document.getElementById("status").innerText = "Minting...";
-    const tx = await contract.mint(qty, {
+    const tx = await signer.sendTransaction({
+      to: CONTRACT,
       value: PRICE.mul(qty)
     });
     await tx.wait();
