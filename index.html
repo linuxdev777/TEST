@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <title>Base Mint</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- ethers v5 UMD (más estable para wallets) -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
@@ -28,48 +26,59 @@ const ABI = [
   "function mint(uint256 amount) payable"
 ];
 
-let provider;
-let signer;
-let contract;
+let provider, signer, contract, userAddress;
 
 async function connectWallet() {
   const status = document.getElementById("status");
   status.innerText = "";
 
   if (!window.ethereum) {
-    alert("No wallet found");
+    status.innerText = "No wallet detected";
     return;
   }
 
   try {
-    // 🔥 ESTO FUERZA EL POPUP SÍ O SÍ
-    await window.ethereum.enable();
+    // 🔴 ESTO FUERZA POPUP REAL (SIN ESTO, MIENTE)
+    await window.ethereum.request({
+      method: "wallet_requestPermissions",
+      params: [{ eth_accounts: {} }]
+    });
+
+    const accounts = await window.ethereum.request({
+      method: "eth_requestAccounts"
+    });
+
+    if (!accounts || accounts.length === 0) {
+      status.innerText = "No account authorized";
+      return;
+    }
+
+    userAddress = accounts[0];
 
     provider = new ethers.providers.Web3Provider(window.ethereum);
     signer = provider.getSigner();
-
-    const address = await signer.getAddress();
     contract = new ethers.Contract(CONTRACT, ABI, signer);
 
-    status.innerText = "Wallet connected: " +
-      address.slice(0,6) + "…" + address.slice(-4);
+    status.innerText =
+      "Wallet connected: " +
+      userAddress.slice(0,6) + "…" + userAddress.slice(-4);
 
   } catch (e) {
     console.error(e);
-    status.innerText = "Connection cancelled";
+    status.innerText = "Connection rejected";
   }
 }
 
 async function mint() {
   const status = document.getElementById("status");
 
-  if (!contract) {
-    status.innerText = "Connect wallet first";
+  if (!contract || !userAddress) {
+    status.innerText = "Wallet not connected";
     return;
   }
 
   try {
-    const amount = document.getElementById("amount").value;
+    const amount = Number(document.getElementById("amount").value);
     const value = ethers.utils.parseEther(
       (amount * Number(PRICE)).toString()
     );
@@ -83,7 +92,7 @@ async function mint() {
 
   } catch (e) {
     console.error(e);
-    status.innerText = "Mint failed";
+    status.innerText = "Mint failed ❌";
   }
 }
 </script>
