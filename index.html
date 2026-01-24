@@ -5,7 +5,7 @@
   <title>Mint</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- ethers v5 -->
+  <!-- ethers v5 estable -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
@@ -15,20 +15,16 @@
 <button onclick="connect()">Connect Wallet</button>
 <br><br>
 
-Cantidad: <input id="amount" type="number" min="1" value="1">
-<br><br>
-
 <button onclick="mint()">Mint</button>
 
 <p id="status"></p>
 
 <script>
 const CONTRACT = "0xa123f03bfda76c4632e647a9f2fb3ad833ec123a";
-const PRICE = "0.0000001"; // precio por NFT
+const PRICE = "0.0000001"; // precio por mint en ETH (en Base)
 
-// ABI corregido para unlimited mint
 const ABI = [
-  "function mint(uint256 amount) payable"
+  "function mint() payable"
 ];
 
 let provider, signer, contract;
@@ -40,17 +36,17 @@ async function connect() {
   }
 
   try {
-    // 1. Solicitar conexión real
+    // 1) Pedir conexión de cuenta
     await window.ethereum.request({ method: "eth_requestAccounts" });
 
-    // 2. Intentar cambiar a Base
+    // 2) Intentar cambiar a Base Mainnet
     try {
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
         params: [{ chainId: "0x2105" }] // Base Mainnet
       });
     } catch (switchError) {
-      // 3. Si Base no está añadida → añadirla
+      // Si la red no existe en MetaMask, añadirla
       if (switchError.code === 4902) {
         await window.ethereum.request({
           method: "wallet_addEthereumChain",
@@ -62,15 +58,17 @@ async function connect() {
             blockExplorerUrls: ["https://basescan.org"]
           }]
         });
+      } else {
+        throw switchError;
       }
     }
 
-    // 4. Inicializar provider, signer y contrato
+    // 3) Inicializar provider, signer y contrato
     provider = new ethers.providers.Web3Provider(window.ethereum);
     signer = provider.getSigner();
     contract = new ethers.Contract(CONTRACT, ABI, signer);
 
-    document.getElementById("status").innerText = "Wallet connected to Base";
+    document.getElementById("status").innerText = "Wallet connected on Base";
   } catch (err) {
     console.error(err);
     document.getElementById("status").innerText = "Connection failed";
@@ -83,15 +81,11 @@ async function mint() {
     return;
   }
 
-  const amount = document.getElementById("amount").value;
-
   try {
     document.getElementById("status").innerText = "Confirm in wallet…";
 
-    const totalPrice = (PRICE * amount).toString();
-
-    const tx = await contract.mint(amount, {
-      value: ethers.utils.parseEther(totalPrice)
+    const tx = await contract.mint({
+      value: ethers.utils.parseEther(PRICE)
     });
 
     await tx.wait();
