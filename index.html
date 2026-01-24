@@ -8,16 +8,88 @@
 </head>
 <body>
 
-  <h2>Mint on Base</h2>
+<h2>Mint</h2>
 
-  <input id="amount" type="number" min="1" value="1">
-  <br><br>
+<input id="amount" type="number" min="1" value="1">
+<br><br>
 
-  <button id="connect">Connect Wallet</button>
-  <button id="mint">Mint</button>
+<button onclick="connect()">Connect Wallet</button>
+<button onclick="mint()">Mint</button>
 
-  <p id="status"></p>
+<p id="status"></p>
 
-  <script src="script.js"></script>
+<script>
+const CONTRACT = "0xa123f03bfda76c4632e647a9f2fb3ad833ec123a";
+const PRICE = 0.0000001;
+
+const ABI = [
+  "function mint(uint256 amount) payable"
+];
+
+let provider, signer, contract;
+
+async function connect() {
+  const status = document.getElementById("status");
+  status.innerText = "";
+
+  if (!window.ethereum) {
+    alert("Wallet not found");
+    return;
+  }
+
+  try {
+    // ⛔ aquí el wallet BLOQUEA hasta que el usuario acepta
+    const accounts = await window.ethereum.request({
+      method: "eth_requestAccounts"
+    });
+
+    if (!accounts || accounts.length === 0) {
+      status.innerText = "No account authorized";
+      return;
+    }
+
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+
+    // comprobación REAL
+    const address = await signer.getAddress();
+
+    contract = new ethers.Contract(CONTRACT, ABI, signer);
+
+    // ✅ SOLO DESPUÉS de todo
+    status.innerText = "Wallet connected: " + address.slice(0,6) + "…" + address.slice(-4);
+
+  } catch (e) {
+    console.error(e);
+    status.innerText = "Connection cancelled";
+  }
+}
+
+async function mint() {
+  const status = document.getElementById("status");
+
+  if (!contract) {
+    status.innerText = "Connect wallet first";
+    return;
+  }
+
+  try {
+    const amount = Number(document.getElementById("amount").value);
+    const value = ethers.parseEther((amount * PRICE).toString());
+
+    status.innerText = "Confirm mint in wallet…";
+
+    const tx = await contract.mint(amount, { value });
+    await tx.wait();
+
+    status.innerText = "Mint successful 🚀";
+
+  } catch (e) {
+    console.error(e);
+    status.innerText = "Mint failed";
+  }
+}
+</script>
+
 </body>
 </html>
