@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Mint</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+
+<h2>Mint</h2>
+
+<button onclick="connect()">Connect Wallet</button>
+<br><br>
+
+Cantidad: <input id="amount" type="number" min="1" value="1">
+<br><br>
+
+<button onclick="mint()">Mint</button>
+
+<p id="status"></p>
+
+<script>
+const CONTRACT = "0xa123f03bfda76c4632e647a9f2fb3ad833ec123a";
+const PRICE = "0.0000001";
+
+const ABI = [
+  "function mint(uint256 amount) payable"
+];
+
+let provider, signer, contract;
+
+async function connect() {
+  if (!window.ethereum) {
+    alert("No wallet");
+    return;
+  }
+
+  // 🔥 Forzar Base Mainnet
+  await window.ethereum.request({
+    method: "wallet_switchEthereumChain",
+    params: [{ chainId: "0x2105" }]
+  });
+
+  await window.ethereum.request({ method: "eth_requestAccounts" });
+
+  provider = new ethers.providers.Web3Provider(window.ethereum);
+  signer = provider.getSigner();
+  contract = new ethers.Contract(CONTRACT, ABI, signer);
+
+  document.getElementById("status").innerText = "Wallet connected (Base)";
+}
+
+async function mint() {
+  if (!contract) {
+    document.getElementById("status").innerText = "Connect wallet first";
+    return;
+  }
+
+  const amount = document.getElementById("amount").value;
+
+  try {
+    document.getElementById("status").innerText = "Confirm in wallet…";
+
+    const tx = await contract.mint(amount, {
+      value: ethers.utils.parseEther((PRICE * amount).toString())
+    });
+
+    await tx.wait();
+
+    document.getElementById("status").innerText = "Mint success";
+  } catch (e) {
+    console.error(e);
+    document.getElementById("status").innerText = "Mint failed";
+  }
+}
+</script>
+
+</body>
+</html>
