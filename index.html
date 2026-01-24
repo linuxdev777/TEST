@@ -1,26 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Mint On Base</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Base Mint</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
 </head>
 <body>
 
-  <div class="container">
-    <h1>Mint On Base</h1>
-    <p class="price">Price: <strong>0.0000001 ETH</strong></p>
+  <h2>Mint on Base</h2>
 
-    <input type="number" id="amount" min="1" value="1" />
-    <button onclick="connectWallet()">Connect Wallet</button>
-    <button onclick="mint()">Mint</button>
+  <input id="amount" type="number" min="1" value="1">
+  <br><br>
 
-    <p id="status"></p>
-  </div>
+  <button id="connect">Connect Wallet</button>
+  <button id="mint">Mint</button>
+
+  <p id="status"></p>
 
   <script src="script.js"></script>
 </body>
 </html>
-
