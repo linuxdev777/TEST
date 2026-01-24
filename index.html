@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title>Mint</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- ethers v5 -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
@@ -22,8 +24,9 @@ Cantidad: <input id="amount" type="number" min="1" value="1">
 
 <script>
 const CONTRACT = "0xa123f03bfda76c4632e647a9f2fb3ad833ec123a";
-const PRICE = "0.0000001";
+const PRICE = "0.0000001"; // precio por NFT
 
+// ABI corregido para unlimited mint
 const ABI = [
   "function mint(uint256 amount) payable"
 ];
@@ -32,23 +35,46 @@ let provider, signer, contract;
 
 async function connect() {
   if (!window.ethereum) {
-    alert("No wallet");
+    alert("No wallet detected");
     return;
   }
 
-  // 🔥 Forzar Base Mainnet
-  await window.ethereum.request({
-    method: "wallet_switchEthereumChain",
-    params: [{ chainId: "0x2105" }]
-  });
+  try {
+    // 1. Solicitar conexión real
+    await window.ethereum.request({ method: "eth_requestAccounts" });
 
-  await window.ethereum.request({ method: "eth_requestAccounts" });
+    // 2. Intentar cambiar a Base
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: "0x2105" }] // Base Mainnet
+      });
+    } catch (switchError) {
+      // 3. Si Base no está añadida → añadirla
+      if (switchError.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: "0x2105",
+            chainName: "Base Mainnet",
+            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+            rpcUrls: ["https://mainnet.base.org"],
+            blockExplorerUrls: ["https://basescan.org"]
+          }]
+        });
+      }
+    }
 
-  provider = new ethers.providers.Web3Provider(window.ethereum);
-  signer = provider.getSigner();
-  contract = new ethers.Contract(CONTRACT, ABI, signer);
+    // 4. Inicializar provider, signer y contrato
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    signer = provider.getSigner();
+    contract = new ethers.Contract(CONTRACT, ABI, signer);
 
-  document.getElementById("status").innerText = "Wallet connected (Base)";
+    document.getElementById("status").innerText = "Wallet connected to Base";
+  } catch (err) {
+    console.error(err);
+    document.getElementById("status").innerText = "Connection failed";
+  }
 }
 
 async function mint() {
@@ -62,8 +88,10 @@ async function mint() {
   try {
     document.getElementById("status").innerText = "Confirm in wallet…";
 
+    const totalPrice = (PRICE * amount).toString();
+
     const tx = await contract.mint(amount, {
-      value: ethers.utils.parseEther((PRICE * amount).toString())
+      value: ethers.utils.parseEther(totalPrice)
     });
 
     await tx.wait();
