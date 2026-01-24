@@ -2,18 +2,18 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Base Mint</title>
+  <title>Mint</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- ethers v5 estable -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
 
 <h2>Mint</h2>
 
-<input id="amount" type="number" min="1" value="1">
+<button onclick="connect()">Connect Wallet</button>
 <br><br>
-
-<button onclick="connectWallet()">Connect Wallet</button>
 <button onclick="mint()">Mint</button>
 
 <p id="status"></p>
@@ -23,76 +23,45 @@ const CONTRACT = "0xa123f03bfda76c4632e647a9f2fb3ad833ec123a";
 const PRICE = "0.0000001";
 
 const ABI = [
-  "function mint(uint256 amount) payable"
+  "function mint() payable"
 ];
 
-let provider, signer, contract, userAddress;
+let provider, signer, contract;
 
-async function connectWallet() {
-  const status = document.getElementById("status");
-  status.innerText = "";
-
+async function connect() {
   if (!window.ethereum) {
-    status.innerText = "No wallet detected";
+    alert("No wallet");
     return;
   }
 
-  try {
-    // 🔴 ESTO FUERZA POPUP REAL (SIN ESTO, MIENTE)
-    await window.ethereum.request({
-      method: "wallet_requestPermissions",
-      params: [{ eth_accounts: {} }]
-    });
+  await window.ethereum.request({ method: "eth_requestAccounts" });
 
-    const accounts = await window.ethereum.request({
-      method: "eth_requestAccounts"
-    });
+  provider = new ethers.providers.Web3Provider(window.ethereum);
+  signer = provider.getSigner();
+  contract = new ethers.Contract(CONTRACT, ABI, signer);
 
-    if (!accounts || accounts.length === 0) {
-      status.innerText = "No account authorized";
-      return;
-    }
-
-    userAddress = accounts[0];
-
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    signer = provider.getSigner();
-    contract = new ethers.Contract(CONTRACT, ABI, signer);
-
-    status.innerText =
-      "Wallet connected: " +
-      userAddress.slice(0,6) + "…" + userAddress.slice(-4);
-
-  } catch (e) {
-    console.error(e);
-    status.innerText = "Connection rejected";
-  }
+  document.getElementById("status").innerText = "Wallet connected";
 }
 
 async function mint() {
-  const status = document.getElementById("status");
-
-  if (!contract || !userAddress) {
-    status.innerText = "Wallet not connected";
+  if (!contract) {
+    document.getElementById("status").innerText = "Connect wallet first";
     return;
   }
 
   try {
-    const amount = Number(document.getElementById("amount").value);
-    const value = ethers.utils.parseEther(
-      (amount * Number(PRICE)).toString()
-    );
+    document.getElementById("status").innerText = "Confirm in wallet…";
 
-    status.innerText = "Confirm mint in wallet…";
+    const tx = await contract.mint({
+      value: ethers.utils.parseEther(PRICE)
+    });
 
-    const tx = await contract.mint(amount, { value });
     await tx.wait();
 
-    status.innerText = "Mint successful 🚀";
-
+    document.getElementById("status").innerText = "Mint success";
   } catch (e) {
     console.error(e);
-    status.innerText = "Mint failed ❌";
+    document.getElementById("status").innerText = "Mint failed";
   }
 }
 </script>
