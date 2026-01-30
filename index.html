@@ -1,1 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PICAMON EN MONAD — Mint</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.12.0/dist/ethers.umd.min.js"></script>
+
+<style>
+body{
+  margin:0;
+  background:#0b0b0b;
+  color:#eaeaea;
+  font-family: monospace;
+}
+.wrapper{
+  max-width:420px;
+  margin:80px auto;
+  padding:24px;
+  border:1px solid #222;
+  background:#111;
+  text-align:center;
+}
+h1{
+  margin-bottom:10px;
+}
+button{
+  width:100%;
+  padding:14px;
+  margin-top:12px;
+  background:#fff;
+  color:#000;
+  border:none;
+  cursor:pointer;
+  font-size:16px;
+}
+button:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+a{
+  color:#6cf;
+  text-decoration:none;
+}
+.info{
+  margin-top:12px;
+  font-size:14px;
+  opacity:.8;
+}
+</style>
+</head>
+
+<body>
+<div class="wrapper">
+  <h1>PICAMON EN MONAD</h1>
+
+  <button id="connect">CONNECT WALLET</button>
+  <button id="mint" disabled>MINT — 0.5</button>
+
+  <div class="info">
+    Contract:<br>
+    0x0CfcA0c6727A5e5a9910BD2F5500FE54b246F425
+  </div>
+
+  <div class="info" style="margin-top:20px;">
+    <a href="https://opensea.io/es/collection/picamon-468046470" target="_blank">
+      View on OpenSea
+    </a>
+  </div>
+</div>
+
+<script>
+const CONTRACT_ADDRESS = "0x0CfcA0c6727A5e5a9910BD2F5500FE54b246F425";
+const MINT_PRICE = "0.5";
+
+let provider, signer, contract;
+
+const ABI = [
+  "function mint() payable"
+];
+
+document.getElementById("connect").onclick = async () => {
+  if (!window.ethereum) {
+    alert("No wallet detected");
+    return;
+  }
+  provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+  signer = await provider.getSigner();
+  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+  document.getElementById("mint").disabled = false;
+  document.getElementById("connect").innerText = "WALLET CONNECTED";
+};
+
+document.getElementById("mint").onclick = async () => {
+  try {
+    const tx = await contract.mint({
+      value: ethers.parseEther(MINT_PRICE)
+    });
+    await tx.wait();
+    alert("Mint successful");
+  } catch (e) {
+    alert("Mint failed");
+  }
+};
+</script>
+</body>
+</html>
 
