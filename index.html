@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>PICAMON EN MONAD — Mint</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.12.0/dist/ethers.umd.min.js"></script>
 
 <style>
@@ -22,22 +21,20 @@ body{
   background:#111;
   text-align:center;
 }
-h1{
-  margin-bottom:10px;
-}
-button{
+input, button{
   width:100%;
   padding:14px;
   margin-top:12px;
+  font-size:16px;
+}
+button{
   background:#fff;
   color:#000;
   border:none;
   cursor:pointer;
-  font-size:16px;
 }
 button:disabled{
   opacity:.5;
-  cursor:not-allowed;
 }
 a{
   color:#6cf;
@@ -56,7 +53,14 @@ a{
   <h1>PICAMON EN MONAD</h1>
 
   <button id="connect">CONNECT WALLET</button>
-  <button id="mint" disabled>MINT — 0.5</button>
+
+  <input id="amount" type="number" min="1" value="1">
+
+  <button id="mint" disabled>MINT</button>
+
+  <div class="info">
+    Mint price: 0.5 each
+  </div>
 
   <div class="info">
     Contract:<br>
@@ -72,19 +76,16 @@ a{
 
 <script>
 const CONTRACT_ADDRESS = "0x0CfcA0c6727A5e5a9910BD2F5500FE54b246F425";
-const MINT_PRICE = "0.5";
+const PRICE = 0.5;
+
+const ABI = [
+  "function mint(uint256 amount) payable"
+];
 
 let provider, signer, contract;
 
-const ABI = [
-  "function mint() payable"
-];
-
 document.getElementById("connect").onclick = async () => {
-  if (!window.ethereum) {
-    alert("No wallet detected");
-    return;
-  }
+  if (!window.ethereum) return alert("No wallet");
   provider = new ethers.BrowserProvider(window.ethereum);
   await provider.send("eth_requestAccounts", []);
   signer = await provider.getSigner();
@@ -95,8 +96,10 @@ document.getElementById("connect").onclick = async () => {
 
 document.getElementById("mint").onclick = async () => {
   try {
-    const tx = await contract.mint({
-      value: ethers.parseEther(MINT_PRICE)
+    const amount = Number(document.getElementById("amount").value);
+    const total = (PRICE * amount).toString();
+    const tx = await contract.mint(amount, {
+      value: ethers.parseEther(total)
     });
     await tx.wait();
     alert("Mint successful");
@@ -107,4 +110,3 @@ document.getElementById("mint").onclick = async () => {
 </script>
 </body>
 </html>
-
