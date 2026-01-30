@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>PICAMON EN MONAD — Mint</title>
+<title>PICAMON EN MONAD Mint</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.12.0/dist/ethers.umd.min.js"></script>
 
 <style>
@@ -14,99 +15,190 @@ body{
   font-family: monospace;
 }
 .wrapper{
-  max-width:420px;
-  margin:80px auto;
+  max-width:520px;
+  margin:60px auto;
   padding:24px;
   border:1px solid #222;
   background:#111;
-  text-align:center;
 }
-input, button{
+h1{
+  text-align:center;
+  letter-spacing:0.25em;
+  margin-bottom:8px;
+}
+.sub{
+  text-align:center;
+  font-size:13px;
+  opacity:.7;
+  margin-bottom:20px;
+}
+.supply{
+  text-align:center;
+  margin-bottom:16px;
+  font-size:14px;
+}
+.card{
+  border:1px solid #333;
+  padding:18px;
+}
+input{
   width:100%;
-  padding:14px;
-  margin-top:12px;
+  padding:10px;
+  background:#000;
+  border:1px solid #333;
+  color:#fff;
   font-size:16px;
+  margin-bottom:12px;
 }
 button{
+  width:100%;
+  padding:12px;
+  font-size:14px;
+  cursor:pointer;
+  border:none;
+  margin-top:6px;
+}
+.primary{
   background:#fff;
   color:#000;
-  border:none;
-  cursor:pointer;
 }
-button:disabled{
-  opacity:.5;
+.outline{
+  background:transparent;
+  border:1px solid #444;
+  color:#fff;
+}
+.status{
+  margin-top:14px;
+  font-size:13px;
+  white-space:pre-wrap;
 }
 a{
   color:#6cf;
   text-decoration:none;
-}
-.info{
-  margin-top:12px;
-  font-size:14px;
-  opacity:.8;
+  font-size:13px;
 }
 </style>
 </head>
 
 <body>
 <div class="wrapper">
-  <h1>PICAMON EN MONAD</h1>
 
-  <button id="connect">CONNECT WALLET</button>
+<h1>PICAMON EN MONAD</h1>
+<div class="sub">Mint</div>
 
-  <input id="amount" type="number" min="1" value="1">
+<div id="supply" class="supply">Loading supply…</div>
 
-  <button id="mint" disabled>MINT</button>
+<div class="card">
+  <input type="number" id="qty" min="1" max="20" value="1">
+  <button class="primary" id="connectBtn">Connect Wallet</button>
+  <button class="outline" id="mintBtn" disabled>Mint</button>
+  <div id="status" class="status">Idle</div>
+</div>
 
-  <div class="info">
-    Mint price: 0.5 each
-  </div>
+<div style="text-align:center;margin-top:16px;">
+  <a href="https://opensea.io/es/collection/picamon-468046470" target="_blank">
+    View on OpenSea
+  </a>
+</div>
 
-  <div class="info">
-    Contract:<br>
-    0x0CfcA0c6727A5e5a9910BD2F5500FE54b246F425
-  </div>
-
-  <div class="info" style="margin-top:20px;">
-    <a href="https://opensea.io/es/collection/picamon-468046470" target="_blank">
-      View on OpenSea
-    </a>
-  </div>
 </div>
 
 <script>
+/* ================= CONFIG ================= */
 const CONTRACT_ADDRESS = "0x0CfcA0c6727A5e5a9910BD2F5500FE54b246F425";
-const PRICE = 0.5;
+const RPC_URL = "https://rpc.monad.xyz";
+const MINT_PRICE = ethers.parseEther("0.5");
+
+const BASE_PARAMS = {
+  chainId: "0x8f",
+  chainName: "Monad Mainnet",
+  nativeCurrency: {
+    name: "Monad",
+    symbol: "MON",
+    decimals: 18
+  },
+  rpcUrls: ["https://rpc.monad.xyz"],
+  blockExplorerUrls: ["https://monadvision.com"]
+};
 
 const ABI = [
-  "function mint(uint256 amount) payable"
+  "function mint(uint256 quantity) external payable",
+  "function totalMinted() view returns (uint256)",
+  "function MAX_SUPPLY() view returns (uint256)"
 ];
 
 let provider, signer, contract;
 
-document.getElementById("connect").onclick = async () => {
-  if (!window.ethereum) return alert("No wallet");
-  provider = new ethers.BrowserProvider(window.ethereum);
-  await provider.send("eth_requestAccounts", []);
-  signer = await provider.getSigner();
-  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-  document.getElementById("mint").disabled = false;
-  document.getElementById("connect").innerText = "WALLET CONNECTED";
+/* ================= HELPERS ================= */
+function log(msg){
+  document.getElementById("status").textContent = msg;
+}
+
+/* ================= LOAD SUPPLY ================= */
+(async()=>{
+  try{
+    const rpc = new ethers.JsonRpcProvider(RPC_URL);
+    const c = new ethers.Contract(CONTRACT_ADDRESS, ABI, rpc);
+    const minted = await c.totalMinted();
+    const max = await c.MAX_SUPPLY();
+    document.getElementById("supply").textContent =
+      `Minted: ${minted} / ${max}`;
+  }catch{
+    document.getElementById("supply").textContent = "Minted: ? / ?";
+  }
+})();
+
+/* ================= CONNECT ================= */
+document.getElementById("connectBtn").onclick = async ()=>{
+  try{
+    if(!window.ethereum) return log("No wallet detected");
+
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: BASE_PARAMS.chainId }]
+    }).catch(async ()=>{
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [BASE_PARAMS]
+      });
+    });
+
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+    log("Wallet connected\nReady to mint");
+    document.getElementById("mintBtn").disabled = false;
+
+  }catch(err){
+    log("Connect error:\n" + (err.message || err));
+  }
 };
 
-document.getElementById("mint").onclick = async () => {
-  try {
-    const amount = Number(document.getElementById("amount").value);
-    const total = (PRICE * amount).toString();
-    const tx = await contract.mint(amount, {
-      value: ethers.parseEther(total)
+/* ================= MINT ================= */
+document.getElementById("mintBtn").onclick = async ()=>{
+  try{
+    const qty = parseInt(document.getElementById("qty").value);
+    if(qty < 1) return log("Invalid quantity");
+
+    const total = MINT_PRICE * BigInt(qty);
+
+    log("Sending mint tx…");
+    const tx = await contract.mint(qty,{
+      value: total,
+      gasLimit: 300000n * BigInt(qty)
     });
+
+    log("Waiting confirmation…\n" + tx.hash);
     await tx.wait();
-    alert("Mint successful");
-  } catch (e) {
-    alert("Mint failed");
+
+    log("✅ Mint confirmed\n" + tx.hash);
+
+  }catch(err){
+    log("Mint error:\n" + (err.reason || err.message || err));
   }
 };
 </script>
+
 </body>
 </html>
